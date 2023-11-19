@@ -158,7 +158,7 @@ public class PostController {
      * @param request
      * @return
      */
-    @PostMapping("/list/page/vo")
+    /*@PostMapping("/list/page/vo")
     public BaseResponse<Page<PostVO>> listPostVOByPage(@RequestBody PostQueryRequest postQueryRequest,
             HttpServletRequest request) {
         long current = postQueryRequest.getCurrent();
@@ -168,7 +168,7 @@ public class PostController {
         Page<Post> postPage = postService.page(new Page<>(current, size),
                 postService.getQueryWrapper(postQueryRequest));
         return ResultUtils.success(postService.getPostVOPage(postPage, request));
-    }
+    }*/
 
     /**
      * 分页获取当前用户创建的资源列表
@@ -177,7 +177,7 @@ public class PostController {
      * @param request
      * @return
      */
-    @PostMapping("/my/list/page/vo")
+    /*@PostMapping("/my/list/page/vo")
     public BaseResponse<Page<PostVO>> listMyPostVOByPage(@RequestBody PostQueryRequest postQueryRequest,
             HttpServletRequest request) {
         if (postQueryRequest == null) {
@@ -192,7 +192,7 @@ public class PostController {
         Page<Post> postPage = postService.page(new Page<>(current, size),
                 postService.getQueryWrapper(postQueryRequest));
         return ResultUtils.success(postService.getPostVOPage(postPage, request));
-    }
+    }*/
 
     // endregion
 
@@ -203,7 +203,7 @@ public class PostController {
      * @param request
      * @return
      */
-    @PostMapping("/search/page/vo")
+   /* @PostMapping("/search/page/vo")
     public BaseResponse<Page<PostVO>> searchPostVOByPage(@RequestBody PostQueryRequest postQueryRequest,
             HttpServletRequest request) {
         long size = postQueryRequest.getPageSize();
@@ -211,7 +211,7 @@ public class PostController {
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         Page<Post> postPage = postService.searchFromEs(postQueryRequest);
         return ResultUtils.success(postService.getPostVOPage(postPage, request));
-    }
+    }*/
 
     /**
      * 编辑（用户）

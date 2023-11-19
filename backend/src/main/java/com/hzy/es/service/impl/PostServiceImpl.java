@@ -34,8 +34,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.FuzzyQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.WildcardQueryBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
@@ -174,14 +177,14 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
             }
             orTagBoolQueryBuilder.minimumShouldMatch(1);
             boolQueryBuilder.filter(orTagBoolQueryBuilder);
-        }
+        }/*
         // 按关键词检索
         if (StringUtils.isNotBlank(searchText)) {
             boolQueryBuilder.should(QueryBuilders.matchQuery("title", searchText));
             boolQueryBuilder.should(QueryBuilders.matchQuery("description", searchText));
             boolQueryBuilder.should(QueryBuilders.matchQuery("content", searchText));
             boolQueryBuilder.minimumShouldMatch(1);
-        }
+        }*/
         // 按标题检索
         if (StringUtils.isNotBlank(title)) {
             boolQueryBuilder.should(QueryBuilders.matchQuery("title", title));
@@ -201,8 +204,32 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         // 分页
         PageRequest pageRequest = PageRequest.of((int) current, (int) pageSize);
         // 构造查询
-        NativeSearchQuery searchQuery = new NativeSearchQueryBuilder().withQuery(boolQueryBuilder)
-                .withPageable(pageRequest).withSorts(sortBuilder).build();
+        FuzzyQueryBuilder fuzzyQuery = null;
+        WildcardQueryBuilder wildcardQuery = null;
+        // 按关键词检索
+        if (StringUtils.isNotBlank(searchText)) {
+            // 纠错匹配
+            fuzzyQuery = QueryBuilders.fuzzyQuery("content", searchText)
+                    .fuzziness(Fuzziness.AUTO);
+            // 模糊匹配
+            wildcardQuery = QueryBuilders.wildcardQuery("content", "*" + searchText + "*");
+            /*boolQueryBuilder.should(QueryBuilders.matchQuery("content", searchText));
+            boolQueryBuilder.minimumShouldMatch(1);*/
+        }
+        // 构造查询
+        NativeSearchQueryBuilder searchQueryBuilder = new NativeSearchQueryBuilder()
+                .withQuery(boolQueryBuilder);
+        if (fuzzyQuery != null) {
+            searchQueryBuilder.withQuery(fuzzyQuery);
+        }
+        if (wildcardQuery != null) {
+            searchQueryBuilder.withQuery(wildcardQuery);
+        }
+        searchQueryBuilder.withPageable(pageRequest)
+                .withSorts(sortBuilder);
+        /*NativeSearchQuery searchQuery = new NativeSearchQueryBuilder().withQuery(boolQueryBuilder)
+                .withPageable(pageRequest).withSorts(sortBuilder).build();*/
+        NativeSearchQuery searchQuery = searchQueryBuilder.build();
         SearchHits<PostEsDTO> searchHits = elasticsearchRestTemplate.search(searchQuery, PostEsDTO.class);
         Page<Post> page = new Page<>();
         page.setTotal(searchHits.getTotalHits());

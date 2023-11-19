@@ -12,9 +12,9 @@
             {{ record.userRole }}
           </template>
         </a-table-column>
-        <a-table-column title="userAccount" :width="90">
+        <a-table-column title="userProfile" :width="90">
           <template #cell="{ record }">
-            {{ record.userAccount }}
+            {{ record.userProfile }}
           </template>
         </a-table-column>
       </template>

@@ -4,12 +4,10 @@
 /* eslint-disable */
 import type { BaseResponse_boolean_ } from '../models/BaseResponse_boolean_';
 import type { BaseResponse_long_ } from '../models/BaseResponse_long_';
-import type { BaseResponse_Page_PostVO_ } from '../models/BaseResponse_Page_PostVO_';
 import type { BaseResponse_PostVO_ } from '../models/BaseResponse_PostVO_';
 import type { DeleteRequest } from '../models/DeleteRequest';
 import type { PostAddRequest } from '../models/PostAddRequest';
 import type { PostEditRequest } from '../models/PostEditRequest';
-import type { PostQueryRequest } from '../models/PostQueryRequest';
 import type { PostUpdateRequest } from '../models/PostUpdateRequest';
 
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -99,72 +97,6 @@ id?: number,
             query: {
                 'id': id,
             },
-            errors: {
-                401: `Unauthorized`,
-                403: `Forbidden`,
-                404: `Not Found`,
-            },
-        });
-    }
-
-    /**
-     * listPostVOByPage
-     * @param postQueryRequest postQueryRequest
-     * @returns BaseResponse_Page_PostVO_ OK
-     * @returns any Created
-     * @throws ApiError
-     */
-    public static listPostVoByPageUsingPost(
-postQueryRequest: PostQueryRequest,
-): CancelablePromise<BaseResponse_Page_PostVO_ | any> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/post/list/page/vo',
-            body: postQueryRequest,
-            errors: {
-                401: `Unauthorized`,
-                403: `Forbidden`,
-                404: `Not Found`,
-            },
-        });
-    }
-
-    /**
-     * listMyPostVOByPage
-     * @param postQueryRequest postQueryRequest
-     * @returns BaseResponse_Page_PostVO_ OK
-     * @returns any Created
-     * @throws ApiError
-     */
-    public static listMyPostVoByPageUsingPost(
-postQueryRequest: PostQueryRequest,
-): CancelablePromise<BaseResponse_Page_PostVO_ | any> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/post/my/list/page/vo',
-            body: postQueryRequest,
-            errors: {
-                401: `Unauthorized`,
-                403: `Forbidden`,
-                404: `Not Found`,
-            },
-        });
-    }
-
-    /**
-     * searchPostVOByPage
-     * @param postQueryRequest postQueryRequest
-     * @returns BaseResponse_Page_PostVO_ OK
-     * @returns any Created
-     * @throws ApiError
-     */
-    public static searchPostVoByPageUsingPost(
-postQueryRequest: PostQueryRequest,
-): CancelablePromise<BaseResponse_Page_PostVO_ | any> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/post/search/page/vo',
-            body: postQueryRequest,
             errors: {
                 401: `Unauthorized`,
                 403: `Forbidden`,

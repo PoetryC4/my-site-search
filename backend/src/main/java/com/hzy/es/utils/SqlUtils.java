@@ -1,5 +1,6 @@
 package com.hzy.es.utils;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 
 /**
@@ -21,5 +22,20 @@ public class SqlUtils {
             return false;
         }
         return !StringUtils.containsAny(sortField, "=", "(", ")", " ");
+    }
+
+    public static boolean isAnyNull(Object... os) {
+        if (!ArrayUtils.isEmpty(os)) {
+            Object[] var1 = os;
+            int var2 = os.length;
+
+            for (int var3 = 0; var3 < var2; ++var3) {
+                Object o = var1[var3];
+                if (o == null) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

@@ -5,12 +5,17 @@ import static com.hzy.es.utils.EncryptionUtils.getRandomString;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hzy.es.common.ErrorCode;
 import com.hzy.es.constant.CommonConstant;
 import com.hzy.es.exception.BusinessException;
 import com.hzy.es.mapper.UserMapper;
+import com.hzy.es.model.dto.post.PostEsDTO;
+import com.hzy.es.model.dto.post.PostQueryRequest;
+import com.hzy.es.model.dto.user.UserEsDTO;
 import com.hzy.es.model.dto.user.UserQueryRequest;
+import com.hzy.es.model.entity.Post;
 import com.hzy.es.model.entity.User;
 import com.hzy.es.model.enums.UserRoleEnum;
 import com.hzy.es.model.vo.LoginUserVO;
@@ -19,11 +24,27 @@ import com.hzy.es.service.UserService;
 import com.hzy.es.utils.SqlUtils;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.elasticsearch.common.unit.Fuzziness;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.FuzzyQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.WildcardQueryBuilder;
+import org.elasticsearch.search.sort.SortBuilder;
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
@@ -37,6 +58,8 @@ import org.springframework.util.DigestUtils;
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
+    @Resource
+    private ElasticsearchRestTemplate elasticsearchRestTemplate;
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
         // 1. 校验
@@ -240,4 +263,101 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 sortField);
         return queryWrapper;
     }
+
+    @Override
+    public Page<User> searchFromEs(UserQueryRequest userQueryRequest) {
+        Long id = userQueryRequest.getId();
+        String unionId = userQueryRequest.getUnionId();
+        String mpOpenId = userQueryRequest.getMpOpenId();
+        String userName = userQueryRequest.getUserName();
+        String userProfile = userQueryRequest.getUserProfile();
+        String searchText = userQueryRequest.getSearchText();
+
+        // es 起始页为 0
+        long current = userQueryRequest.getCurrent() - 1;
+        long pageSize = userQueryRequest.getPageSize();
+        String sortField = userQueryRequest.getSortField();
+        String sortOrder = userQueryRequest.getSortOrder();
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        // 过滤
+        boolQueryBuilder.filter(QueryBuilders.termQuery("isDelete", 0));
+        if (id != null) {
+            boolQueryBuilder.filter(QueryBuilders.termQuery("id", id));
+        }
+        if (unionId != null) {
+            boolQueryBuilder.mustNot(QueryBuilders.termQuery("unionId", unionId));
+        }
+        if (mpOpenId != null) {
+            boolQueryBuilder.filter(QueryBuilders.termQuery("mpOpenId", mpOpenId));
+        }
+        // 按标题检索
+        if (StringUtils.isNotBlank(userName)) {
+            boolQueryBuilder.should(QueryBuilders.matchQuery("userName", userName));
+            boolQueryBuilder.minimumShouldMatch(1);
+        }
+        // 按内容检索
+        if (StringUtils.isNotBlank(userProfile)) {
+            boolQueryBuilder.should(QueryBuilders.matchQuery("userProfile", userProfile));
+            boolQueryBuilder.minimumShouldMatch(1);
+        }
+        // 排序
+        SortBuilder<?> sortBuilder = SortBuilders.scoreSort();
+        if (StringUtils.isNotBlank(sortField)) {
+            sortBuilder = SortBuilders.fieldSort(sortField);
+            sortBuilder.order(CommonConstant.SORT_ORDER_ASC.equals(sortOrder) ? SortOrder.ASC : SortOrder.DESC);
+        }
+        // 分页
+        PageRequest pageRequest = PageRequest.of((int) current, (int) pageSize);
+        // 构造查询
+        FuzzyQueryBuilder fuzzyQuery = null;
+        WildcardQueryBuilder wildcardQuery = null;
+        // 按关键词检索
+        if (StringUtils.isNotBlank(searchText)) {
+            // 纠错匹配
+            fuzzyQuery = QueryBuilders.fuzzyQuery("userName", searchText)
+                    .fuzziness(Fuzziness.AUTO);
+            // 模糊匹配
+            wildcardQuery = QueryBuilders.wildcardQuery("userName", "*" + searchText + "*");
+        }
+        // 构造查询
+        NativeSearchQueryBuilder searchQueryBuilder = new NativeSearchQueryBuilder()
+                .withQuery(boolQueryBuilder);
+        if (fuzzyQuery != null) {
+            searchQueryBuilder.withQuery(fuzzyQuery);
+        }
+        if (wildcardQuery != null) {
+            searchQueryBuilder.withQuery(wildcardQuery);
+        }
+        searchQueryBuilder.withPageable(pageRequest)
+                .withSorts(sortBuilder);
+        /*NativeSearchQuery searchQuery = new NativeSearchQueryBuilder().withQuery(boolQueryBuilder)
+                .withPageable(pageRequest).withSorts(sortBuilder).build();*/
+        NativeSearchQuery searchQuery = searchQueryBuilder.build();
+        SearchHits<UserEsDTO> searchHits = elasticsearchRestTemplate.search(searchQuery, UserEsDTO.class);
+        Page<User> page = new Page<>();
+        page.setTotal(searchHits.getTotalHits());
+        List<User> resourceList = new ArrayList<>();
+        // 查出结果后，从 db 获取最新动态数据（比如点赞数）
+        if (searchHits.hasSearchHits()) {
+            List<SearchHit<UserEsDTO>> searchHitList = searchHits.getSearchHits();
+            List<Long> userIdList = searchHitList.stream().map(searchHit -> searchHit.getContent().getId())
+                    .collect(Collectors.toList());
+            List<User> userList = baseMapper.selectBatchIds(userIdList);
+            if (userList != null) {
+                Map<Long, List<User>> idUserMap = userList.stream().collect(Collectors.groupingBy(User::getId));
+                userIdList.forEach(userId -> {
+                    if (idUserMap.containsKey(userId)) {
+                        resourceList.add(idUserMap.get(userId).get(0));
+                    } else {
+                        // 从 es 清空 db 已物理删除的数据
+                        String delete = elasticsearchRestTemplate.delete(String.valueOf(userId), PostEsDTO.class);
+                        log.info("delete post {}", delete);
+                    }
+                });
+            }
+        }
+        page.setRecords(resourceList);
+        return page;
+    }
+
 }

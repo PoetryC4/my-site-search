@@ -1,11 +1,9 @@
-package com.hzy.es.model.dto.post;
+package com.hzy.es.model.dto.user;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.hzy.es.model.entity.Post;
-import java.io.Serializable;
-import java.util.Date;
-import java.util.List;
+import com.hzy.es.model.entity.User;
 import lombok.Data;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -15,6 +13,10 @@ import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
+import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
+
 /**
  * 帖子 ES 包装类
  *
@@ -22,11 +24,12 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
  * @from <a href="https://yupi.icu">编程导航知识星球</a>
  **/
 // todo 取消注释开启 ES（须先配置 ES）
-@Document(indexName = "post")
+@Document(indexName = "user")
 @Data
-public class PostEsDTO implements Serializable {
+public class UserEsDTO implements Serializable {
 
     private static final String DATE_TIME_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+
 
     /**
      * id
@@ -35,37 +38,25 @@ public class PostEsDTO implements Serializable {
     private Long id;
 
     /**
-     * 标题
+     * 用户昵称
      */
     @Field(type = FieldType.Text)
-    private String title;
+    private String userName;
 
     /**
-     * 内容
+     * 用户头像
      */
-    @Field(type = FieldType.Text)
-    private String content;
+    private String userAvatar;
 
     /**
-     * 标签列表
+     * 用户简介
      */
-    private List<String> tags;
+    private String userProfile;
 
     /**
-     * 点赞数
+     * 用户角色：user/admin/ban
      */
-    private Integer thumbNum;
-
-    /**
-     * 收藏数
-     */
-    private Integer favourNum;
-
-    /**
-     * 创建用户 id
-     */
-    @Field(index = false, type = FieldType.Long)
-    private Long userId;
+    private String userRole;
 
     /**
      * 创建时间
@@ -91,39 +82,30 @@ public class PostEsDTO implements Serializable {
     /**
      * 对象转包装类
      *
-     * @param post
+     * @param user
      * @return
      */
-    public static PostEsDTO objToDto(Post post) {
-        if (post == null) {
+    public static UserEsDTO objToDto(User user) {
+        if (user == null) {
             return null;
         }
-        PostEsDTO postEsDTO = new PostEsDTO();
-        BeanUtils.copyProperties(post, postEsDTO);
-        String tagsStr = post.getTags();
-        if (StringUtils.isNotBlank(tagsStr)) {
-            postEsDTO.setTags(GSON.fromJson(tagsStr, new TypeToken<List<String>>() {
-            }.getType()));
-        }
-        return postEsDTO;
+        UserEsDTO userEsDTO = new UserEsDTO();
+        BeanUtils.copyProperties(user, userEsDTO);
+        return userEsDTO;
     }
 
     /**
      * 包装类转对象
      *
-     * @param postEsDTO
+     * @param userEsDTO
      * @return
      */
-    public static Post dtoToObj(PostEsDTO postEsDTO) {
-        if (postEsDTO == null) {
+    public static User dtoToObj(UserEsDTO userEsDTO) {
+        if (userEsDTO == null) {
             return null;
         }
-        Post post = new Post();
-        BeanUtils.copyProperties(postEsDTO, post);
-        List<String> tagList = postEsDTO.getTags();
-        if (CollectionUtils.isNotEmpty(tagList)) {
-            post.setTags(GSON.toJson(tagList));
-        }
-        return post;
+        User user = new User();
+        BeanUtils.copyProperties(userEsDTO, user);
+        return user;
     }
 }

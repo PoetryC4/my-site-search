@@ -23,4 +23,10 @@
         userName,userAvatar,userProfile,
         userRole,createTime,updateTime,isDelete
     </sql>
+
+    <select id="listUserWithDelete" resultType="com.hzy.es.model.entity.User">
+        select *
+        from user
+        where updateTime >= #{minUpdateTime}
+    </select>
 </mapper>

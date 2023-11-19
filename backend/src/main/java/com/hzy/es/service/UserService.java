@@ -1,8 +1,11 @@
 package com.hzy.es.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.hzy.es.model.dto.post.PostQueryRequest;
 import com.hzy.es.model.dto.user.UserQueryRequest;
+import com.hzy.es.model.entity.Post;
 import com.hzy.es.model.entity.User;
 import com.hzy.es.model.vo.LoginUserVO;
 import com.hzy.es.model.vo.UserVO;
@@ -107,5 +110,12 @@ public interface UserService extends IService<User> {
      * @return
      */
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
+    /**
+     * 从 ES 查询
+     *
+     * @param userQueryRequest
+     * @return
+     */
+    Page<User> searchFromEs(UserQueryRequest userQueryRequest);
 
 }

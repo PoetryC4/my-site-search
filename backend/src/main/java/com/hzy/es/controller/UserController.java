@@ -219,7 +219,7 @@ public class UserController {
      * @param request
      * @return
      */
-    @PostMapping("/list/page")
+    /*@PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<User>> listUserByPage(@RequestBody UserQueryRequest userQueryRequest,
             HttpServletRequest request) {
@@ -228,7 +228,7 @@ public class UserController {
         Page<User> userPage = userService.page(new Page<>(current, size),
                 userService.getQueryWrapper(userQueryRequest));
         return ResultUtils.success(userPage);
-    }
+    }*/
 
     /**
      * 分页获取用户封装列表
@@ -237,7 +237,7 @@ public class UserController {
      * @param request
      * @return
      */
-    @PostMapping("/list/page/vo")
+    /*@PostMapping("/list/page/vo")
     public BaseResponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest,
             HttpServletRequest request) {
         if (userQueryRequest == null) {
@@ -253,7 +253,7 @@ public class UserController {
         List<UserVO> userVO = userService.getUserVO(userPage.getRecords());
         userVOPage.setRecords(userVO);
         return ResultUtils.success(userVOPage);
-    }
+    }*/
 
     // endregion
 

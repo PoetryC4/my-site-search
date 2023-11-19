@@ -29,7 +29,7 @@
         <a-layout-header>
           <a-menu
             mode="horizontal"
-            :selected-keys="[selectedKeys]"
+            :selected-keys="[category]"
             @menu-item-click="handleMenuClick"
           >
             <a-menu-item key="user">用户</a-menu-item>
@@ -39,20 +39,20 @@
         </a-layout-header>
         <a-layout-content style="margin-top: 30px">
           <UserResultView
-            v-if="selectedKeys === 'user'"
-            :part="part"
+            v-if="category === 'user'"
+            :part="category"
             :search-content="searchContent"
-            :user-counts="data.userCounts"
-            :user-table="data.userTable"
-            :get-list="getUserList"
+            :user-counts="data.resultCounts"
+            :user-table="data.resultTable"
+            :get-list="getSearchList"
           />
           <PostResultView
-            v-else-if="selectedKeys === 'post'"
-            :part="part"
+            v-else-if="category === 'post'"
+            :part="category"
             :search-content="searchContent"
-            :post-counts="data.postCounts"
-            :post-table="data.postTable"
-            :get-list="getPostList"
+            :post-counts="data.resultCounts"
+            :post-table="data.resultTable"
+            :get-list="getSearchList"
           />
         </a-layout-content>
       </a-layout>
@@ -66,7 +66,7 @@ import { onMounted, reactive, ref } from "vue";
 import UserResultView from "@/views/UserResultView.vue";
 import { useRoute, useRouter } from "vue-router";
 import PostResultView from "@/views/PostResultView.vue";
-import { PostControllerService, UserControllerService } from "@/api";
+import { SearchControllerService } from "@/api";
 import { Message } from "@arco-design/web-vue";
 
 const route = useRoute();
@@ -75,73 +75,44 @@ const router = useRouter();
 const searchContent = ref("");
 const curPage = ref(1);
 const pageSize = ref(8);
-const selectedKeys = ref("user");
-const part = ref("");
+const category = ref("");
 
 const handleMenuClick = (key: string) => {
-  selectedKeys.value = key;
-  part.value = key;
+  category.value = key;
   doSearch();
 };
 
 const data = reactive({
-  postTable: [],
-  postCounts: 0,
-  userTable: [],
-  userCounts: 0,
+  resultTable: [],
+  resultCounts: 0,
 });
 
-const getPostList = async () => {
-  const res = await PostControllerService.listPostVoByPageUsingPost({
+const getSearchList = async () => {
+  const res = await SearchControllerService.listObjectByPageUsingPost({
     current: curPage.value,
     pageSize: pageSize.value,
-    content:
+    searchText:
       searchContent.value.length === undefined || searchContent.value.length < 1
         ? null
         : searchContent.value,
+    category: category.value,
+    userEs: true,
   });
   if (res.code != 0) {
     Message.error("err" + res.message);
   } else {
-    data.postTable = res.data.records || [];
-    data.postCounts = parseInt(res.data.total);
-  }
-  return null;
-};
-
-const getUserList = async () => {
-  const res = await UserControllerService.listUserVoByPageUsingPost({
-    current: curPage.value,
-    pageSize: pageSize.value,
-    userName:
-      searchContent.value.length === undefined || searchContent.value.length < 1
-        ? null
-        : searchContent.value,
-  });
-  if (res.code != 0) {
-    Message.error("err" + res.message);
-  } else {
-    data.userTable = res.data.records || [];
-    data.userCounts = parseInt(res.data.total);
+    data.resultTable = res.data.records || [];
+    data.resultCounts = parseInt(res.data.total);
   }
   return null;
 };
 
 const doSearch = async () => {
-  switch (part.value) {
-    default: {
-      await getUserList();
-      break;
-    }
-    case "post": {
-      await getPostList();
-      break;
-    }
-  }
+  await getSearchList();
   await router.push({
     path: "/search",
     query: {
-      part: part.value,
+      category: category.value,
       curPage: curPage.value,
       pageSize: pageSize.value,
       searchContent: searchContent.value,
@@ -152,16 +123,7 @@ onMounted(() => {
   pageSize.value = parseInt(route.query.pageSize as string) || 8;
   curPage.value = parseInt(route.query.curPage as string) || 1;
   searchContent.value = (route.query.searchContent as string) || "";
-  part.value = (route.query.part as string) || "";
-  // 记忆化
-  if (part.value === "user") {
-    selectedKeys.value = "user";
-  } else if (part.value === "post") {
-    selectedKeys.value = "post";
-  } else if (part.value === "test") {
-    selectedKeys.value = "test";
-  } else {
-    selectedKeys.value = "user";
-  }
+  category.value = (route.query.category as string) || "user";
+  doSearch();
 });
 </script>
