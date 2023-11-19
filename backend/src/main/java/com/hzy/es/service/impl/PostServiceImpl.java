@@ -39,6 +39,7 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.FuzzyQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.WildcardQueryBuilder;
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
@@ -204,28 +205,26 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         // 分页
         PageRequest pageRequest = PageRequest.of((int) current, (int) pageSize);
         // 构造查询
-        FuzzyQueryBuilder fuzzyQuery = null;
-        WildcardQueryBuilder wildcardQuery = null;
-        // 按关键词检索
-        if (StringUtils.isNotBlank(searchText)) {
-            // 纠错匹配
-            fuzzyQuery = QueryBuilders.fuzzyQuery("content", searchText)
-                    .fuzziness(Fuzziness.AUTO);
-            // 模糊匹配
-            wildcardQuery = QueryBuilders.wildcardQuery("content", "*" + searchText + "*");
-            /*boolQueryBuilder.should(QueryBuilders.matchQuery("content", searchText));
-            boolQueryBuilder.minimumShouldMatch(1);*/
-        }
-        // 构造查询
         NativeSearchQueryBuilder searchQueryBuilder = new NativeSearchQueryBuilder()
                 .withQuery(boolQueryBuilder);
-        if (fuzzyQuery != null) {
-            searchQueryBuilder.withQuery(fuzzyQuery);
-        }
-        if (wildcardQuery != null) {
-            searchQueryBuilder.withQuery(wildcardQuery);
+        // 按关键词检索
+        if (StringUtils.isNotBlank(searchText)) {
+
+            BoolQueryBuilder boolQueryBuilder1 = new BoolQueryBuilder();
+
+            boolQueryBuilder1.should(QueryBuilders.fuzzyQuery("content", searchText).fuzziness(Fuzziness.ONE));
+            boolQueryBuilder1.should(QueryBuilders.matchPhraseQuery("content", searchText));
+            boolQueryBuilder1.should(QueryBuilders.matchPhrasePrefixQuery("content", searchText));
+            boolQueryBuilder1.should(QueryBuilders.fuzzyQuery("title", searchText).fuzziness(Fuzziness.ONE));
+            boolQueryBuilder1.should(QueryBuilders.matchPhraseQuery("title", searchText));
+            boolQueryBuilder1.should(QueryBuilders.matchPhrasePrefixQuery("title", searchText));
+            boolQueryBuilder1.minimumShouldMatch(1);
+
+            searchQueryBuilder.withQuery(boolQueryBuilder1);
         }
         searchQueryBuilder.withPageable(pageRequest)
+                .withHighlightFields(new HighlightBuilder.Field("title").preTags("<span style='background-color:yellow'>").postTags("</span>").requireFieldMatch(false)) // 加高亮
+                .withHighlightFields(new HighlightBuilder.Field("content").preTags("<span style='background-color:yellow'>").postTags("</span>").requireFieldMatch(false)) // 加高亮
                 .withSorts(sortBuilder);
         /*NativeSearchQuery searchQuery = new NativeSearchQueryBuilder().withQuery(boolQueryBuilder)
                 .withPageable(pageRequest).withSorts(sortBuilder).build();*/
@@ -236,6 +235,23 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         List<Post> resourceList = new ArrayList<>();
         // 查出结果后，从 db 获取最新动态数据（比如点赞数）
         if (searchHits.hasSearchHits()) {
+            searchHits.getSearchHits().forEach(searchHit -> {
+                Long postId = searchHit.getContent().getId();
+                Post post = this.baseMapper.selectById(postId);
+                if(post == null) {
+                    // 从 es 清空 db 已物理删除的数据
+                    String delete = elasticsearchRestTemplate.delete(String.valueOf(postId), PostEsDTO.class);
+                    log.info("delete post {}", delete);
+                } else {
+                    if (searchHit.getHighlightFields().containsKey("title")) {
+                        post.setTitle(searchHit.getHighlightFields().get("title").get(0));
+                    }
+                    if (searchHit.getHighlightFields().containsKey("content")) {
+                        post.setContent(searchHit.getHighlightFields().get("content").get(0));
+                    }
+                    resourceList.add(post);
+                }
+            });/*
             List<SearchHit<PostEsDTO>> searchHitList = searchHits.getSearchHits();
             List<Long> postIdList = searchHitList.stream().map(searchHit -> searchHit.getContent().getId())
                     .collect(Collectors.toList());
@@ -251,7 +267,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
                         log.info("delete post {}", delete);
                     }
                 });
-            }
+            }*/
         }
         page.setRecords(resourceList);
         return page;

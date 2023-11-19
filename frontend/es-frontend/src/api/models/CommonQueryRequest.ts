@@ -4,11 +4,11 @@
 /* eslint-disable */
 
 export type CommonQueryRequest = {
-    category?: string;
-    current?: number;
-    pageSize?: number;
-    searchText?: string;
-    sortField?: string;
-    sortOrder?: string;
-    userEs?: boolean;
+  category?: string;
+  current?: number;
+  pageSize?: number;
+  searchText?: string;
+  sortField?: string;
+  sortOrder?: string;
+  useEs?: boolean;
 };

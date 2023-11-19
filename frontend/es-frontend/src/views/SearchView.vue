@@ -96,7 +96,7 @@ const getSearchList = async () => {
         ? null
         : searchContent.value,
     category: category.value,
-    userEs: true,
+    useEs: true,
   });
   if (res.code != 0) {
     Message.error("err" + res.message);

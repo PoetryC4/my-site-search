@@ -4,7 +4,7 @@
       <template #columns>
         <a-table-column title="title" :width="90">
           <template #cell="{ record }">
-            {{ record.title }}
+            <div v-bind:innerHTML="record.title"></div>
           </template>
         </a-table-column>
         <a-table-column title="tagList" :width="90">
@@ -14,7 +14,7 @@
         </a-table-column>
         <a-table-column title="content" :width="90">
           <template #cell="{ record }">
-            {{ record.content }}
+            <div v-bind:innerHTML="record.content"></div>
           </template>
         </a-table-column>
       </template>

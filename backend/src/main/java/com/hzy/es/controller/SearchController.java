@@ -13,10 +13,7 @@ import com.hzy.es.model.dto.search.CommonQueryRequest;
 import com.hzy.es.service.PostService;
 import com.hzy.es.service.UserService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -46,11 +43,16 @@ public class SearchController {
         // 限制爬虫
         ThrowUtils.throwIf(size > 25, ErrorCode.PARAMS_ERROR);
         String category = commonQueryRequest.getCategory();
-        Boolean userEs = commonQueryRequest.getUserEs();
-        if (isAnyNull(category, userEs)) {
+        Boolean useEs = commonQueryRequest.getUseEs();
+        if (isAnyNull(category, useEs)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        SearchStrategy searchStrategy = SearchFactory.newInstance(category, userEs);
+        SearchStrategy searchStrategy = SearchFactory.newInstance(category, useEs);
         return ResultUtils.success(searchStrategy.doSearch(commonQueryRequest, request));
+    }
+
+    @GetMapping("/test")
+    public BaseResponse<String> test() {
+        return ResultUtils.success("test suc");
     }
 }

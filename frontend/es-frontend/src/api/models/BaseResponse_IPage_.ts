@@ -3,10 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { IPage } from './IPage';
+import type { IPage } from "./IPage";
 
 export type BaseResponse_IPage_ = {
-    code?: number;
-    data?: IPage;
-    message?: string;
+  code?: number;
+  data?: IPage;
+  message?: string;
 };

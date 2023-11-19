@@ -9,8 +9,8 @@ import com.hzy.es.exception.BusinessException;
 import com.hzy.es.model.enums.SearchTypeEnum;
 
 public class SearchFactory {
-    public static SearchStrategy newInstance(String category, Boolean userEs) {
-        if (userEs) {
+    public static SearchStrategy newInstance(String category, Boolean useEs) {
+        if (useEs) {
             if (SearchTypeEnum.USER.getValue().equals(category)) {
                 return new SearchStrategyUserEs();
             } else if (SearchTypeEnum.POST.getValue().equals(category)) {

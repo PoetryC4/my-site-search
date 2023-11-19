@@ -4,9 +4,9 @@
 /* eslint-disable */
 
 export type IPage = {
-    current?: number;
-    pages?: number;
-    records?: Array<any>;
-    size?: number;
-    total?: number;
+  current?: number;
+  pages?: number;
+  records?: Array<any>;
+  size?: number;
+  total?: number;
 };

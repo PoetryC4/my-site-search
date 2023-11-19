@@ -4,7 +4,7 @@
       <template #columns>
         <a-table-column title="userName" :width="90">
           <template #cell="{ record }">
-            {{ record.userName }}
+            <div v-bind:innerHTML="record.userName"></div>
           </template>
         </a-table-column>
         <a-table-column title="userRole" :width="90">
@@ -57,10 +57,8 @@
 
 <script lang="ts" setup>
 import { IconSend, IconSunFill } from "@arco-design/web-vue/es/icon";
-import { defineProps, onMounted, reactive, ref, withDefaults } from "vue";
+import { defineProps, onMounted, ref, withDefaults } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { UserControllerService } from "@/api";
-import { Message } from "@arco-design/web-vue";
 
 const route = useRoute();
 const router = useRouter();

@@ -22,19 +22,19 @@ import com.hzy.es.model.vo.LoginUserVO;
 import com.hzy.es.model.vo.UserVO;
 import com.hzy.es.service.UserService;
 import com.hzy.es.utils.SqlUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.common.unit.Fuzziness;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.FuzzyQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.WildcardQueryBuilder;
+import org.elasticsearch.index.query.*;
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
@@ -60,6 +60,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Resource
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
+
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
         // 1. 校验
@@ -309,26 +310,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 分页
         PageRequest pageRequest = PageRequest.of((int) current, (int) pageSize);
         // 构造查询
+        //MatchQueryBuilder fuzziness = QueryBuilders.matchQuery("yourFieldName", "小狗").fuzziness(2);
         FuzzyQueryBuilder fuzzyQuery = null;
-        WildcardQueryBuilder wildcardQuery = null;
-        // 按关键词检索
-        if (StringUtils.isNotBlank(searchText)) {
-            // 纠错匹配
-            fuzzyQuery = QueryBuilders.fuzzyQuery("userName", searchText)
-                    .fuzziness(Fuzziness.AUTO);
-            // 模糊匹配
-            wildcardQuery = QueryBuilders.wildcardQuery("userName", "*" + searchText + "*");
-        }
+        MatchPhraseQueryBuilder matchPhraseQueryBuilder = null;
         // 构造查询
         NativeSearchQueryBuilder searchQueryBuilder = new NativeSearchQueryBuilder()
                 .withQuery(boolQueryBuilder);
-        if (fuzzyQuery != null) {
-            searchQueryBuilder.withQuery(fuzzyQuery);
-        }
-        if (wildcardQuery != null) {
-            searchQueryBuilder.withQuery(wildcardQuery);
+        // 按关键词检索
+        if (StringUtils.isNotBlank(searchText)) {
+            BoolQueryBuilder boolQueryBuilder1 = new BoolQueryBuilder();
+
+            boolQueryBuilder1.should(QueryBuilders.fuzzyQuery("userName", searchText).fuzziness(Fuzziness.ONE));
+            boolQueryBuilder1.should(QueryBuilders.matchPhraseQuery("userName", searchText));
+            boolQueryBuilder1.should(QueryBuilders.matchPhrasePrefixQuery("userName", searchText));
+            boolQueryBuilder1.minimumShouldMatch(1);
+
+            searchQueryBuilder.withQuery(boolQueryBuilder1);
         }
         searchQueryBuilder.withPageable(pageRequest)
+                .withHighlightFields(new HighlightBuilder.Field("userName").preTags("<span style='background-color:yellow'>").postTags("</span>").requireFieldMatch(false)) // 加高亮
                 .withSorts(sortBuilder);
         /*NativeSearchQuery searchQuery = new NativeSearchQueryBuilder().withQuery(boolQueryBuilder)
                 .withPageable(pageRequest).withSorts(sortBuilder).build();*/
@@ -339,7 +339,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         List<User> resourceList = new ArrayList<>();
         // 查出结果后，从 db 获取最新动态数据（比如点赞数）
         if (searchHits.hasSearchHits()) {
-            List<SearchHit<UserEsDTO>> searchHitList = searchHits.getSearchHits();
+            searchHits.getSearchHits().forEach(searchHit -> {
+                Long userId = searchHit.getContent().getId();
+                User user = this.baseMapper.selectById(userId);
+                if (user == null) {
+                    // 从 es 清空 db 已物理删除的数据
+                    String delete = elasticsearchRestTemplate.delete(String.valueOf(userId), PostEsDTO.class);
+                    log.info("delete post {}", delete);
+                } else {
+                    if (searchHit.getHighlightFields().containsKey("userName")) {
+                        user.setUserName(searchHit.getHighlightFields().get("userName").get(0));
+                    }
+                    resourceList.add(user);
+                }
+            });
+
+            /*List<SearchHit<UserEsDTO>> searchHitList = searchHits.getSearchHits();
             List<Long> userIdList = searchHitList.stream().map(searchHit -> searchHit.getContent().getId())
                     .collect(Collectors.toList());
             List<User> userList = baseMapper.selectBatchIds(userIdList);
@@ -347,14 +362,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 Map<Long, List<User>> idUserMap = userList.stream().collect(Collectors.groupingBy(User::getId));
                 userIdList.forEach(userId -> {
                     if (idUserMap.containsKey(userId)) {
-                        resourceList.add(idUserMap.get(userId).get(0));
+                        User user = idUserMap.get(userId).get(0);
+                        resourceList.add(user);
                     } else {
                         // 从 es 清空 db 已物理删除的数据
                         String delete = elasticsearchRestTemplate.delete(String.valueOf(userId), PostEsDTO.class);
                         log.info("delete post {}", delete);
                     }
                 });
-            }
+            }*/
         }
         page.setRecords(resourceList);
         return page;

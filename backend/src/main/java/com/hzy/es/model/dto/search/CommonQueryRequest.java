@@ -20,7 +20,7 @@ public class CommonQueryRequest extends PageRequest implements Serializable {
     /**
      * 类型
      */
-    private Boolean userEs;
+    private Boolean useEs;
 
     /**
      * 类型
