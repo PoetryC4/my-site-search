@@ -39,4 +39,8 @@ public class EncryptionUtils {
 
         return Base64.getEncoder().encodeToString(hash);
     }
+
+    public static void main(String[] args) {
+        System.out.println(getRandomString(12));
+    }
 }

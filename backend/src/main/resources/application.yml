@@ -71,3 +71,12 @@ elasticsearch:
       tokenizer:
         ik_smart_tokenizer:
           type: ik_smart
+security:
+  oauth2:
+    client:
+      client-id: client
+      client-secret: dlWUrjmxbf8u
+      access-token-uri: http://localhost:10101/oauth/token
+      user-authorization-uri: http://localhost:10101/oauth/authorize
+    resource:
+      token-info-uri: http://localhost:10101/oauth/check_token
